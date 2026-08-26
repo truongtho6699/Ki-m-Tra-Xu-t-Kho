@@ -16,6 +16,7 @@
     .nav-pills .nav-link { border-radius: 8px; font-weight: 600; padding: 10px 16px; }
     .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
     
+    /* Khung Live Camera */
     #scanner-container {
       position: relative;
       width: 100%;
@@ -24,36 +25,70 @@
       border-radius: 12px;
       overflow: hidden;
       background-color: #000;
+      min-height: 260px;
     }
     #reader { width: 100%; }
-    
+    #reader video { border-radius: 12px; object-fit: cover; }
+
+    /* Khung ngắm 4 góc màu trắng */
+    .scanner-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 82%;
+      max-width: 320px;
+      height: 170px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .corner {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border-color: #ffffff;
+      border-style: solid;
+    }
+    .corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 4px; }
+    .corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 4px; }
+    .corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 4px; }
+    .corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 4px; }
+
+    /* Vạch laser quét màu xanh lá */
     .laser-line {
       position: absolute;
-      top: 20%;
-      left: 5%;
-      width: 90%;
+      top: 15%;
+      left: 2%;
+      width: 96%;
       height: 3px;
-      background: linear-gradient(90deg, transparent, #00ff00, transparent);
-      box-shadow: 0 0 8px #00ff00;
-      animation: scanLaser 2s infinite ease-in-out;
-      z-index: 10;
+      background: #00ff44;
+      box-shadow: 0 0 12px #00ff44, 0 0 4px #fff;
+      animation: scanLaser 1.8s infinite ease-in-out;
+      z-index: 11;
       pointer-events: none;
     }
     @keyframes scanLaser {
-      0% { top: 20%; }
-      50% { top: 80%; }
-      100% { top: 20%; }
+      0% { top: 12%; }
+      50% { top: 85%; }
+      100% { top: 12%; }
+    }
+
+    /* Hiệu ứng chớp sáng ô input khi nhận mã */
+    .highlight-success {
+      border: 2px solid #198754 !important;
+      background-color: #d1e7dd !important;
+      transition: all 0.3s ease;
     }
 
     .scan-alert {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 600;
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-radius: 10px;
-      animation: fadeInDown 0.3s ease;
+      animation: fadeInDown 0.25s ease;
     }
     @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-10px); }
+      from { opacity: 0; transform: translateY(-8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
@@ -72,6 +107,7 @@
   </nav>
 
   <div class="container mt-3">
+    <!-- Menu Tabs -->
     <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded-3 shadow-sm" id="mainTab" role="tablist">
       <li class="nav-item">
         <button class="nav-link active" id="menu1-tab" data-bs-toggle="tab" data-bs-target="#menu1" type="button" onclick="loadOrdersSummary()">
@@ -80,13 +116,13 @@
       </li>
       <li class="nav-item">
         <button class="nav-link" id="menu2-tab" data-bs-toggle="tab" data-bs-target="#menu2" type="button">
-          <i class="bi bi-camera me-1"></i> 2. Quét kiểm tra (Live)
+          <i class="bi bi-camera-video-fill me-1"></i> 2. Quét kiểm tra (Live)
         </button>
       </li>
     </ul>
 
     <div class="tab-content" id="mainTabContent">
-      <!-- MENU 1: DANH SÁCH ĐƠN HÀNG -->
+      <!-- ================= MENU 1: DANH SÁCH ĐƠN HÀNG ================= -->
       <div class="tab-pane fade show active" id="menu1" role="tabpanel">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="text-secondary mb-0">Tổng hợp đơn hàng cần xuất:</h6>
@@ -99,7 +135,7 @@
         <div id="ordersList" class="row g-3"></div>
       </div>
 
-      <!-- MENU 2: QUÉT TRỰC TIẾP & TRẢ KẾT QUẢ TỨC THÌ -->
+      <!-- ================= MENU 2: LIVE CAMERA TRỰC TIẾP ================= -->
       <div class="tab-pane fade" id="menu2" role="tabpanel">
         <div class="card mb-3 p-3">
           <div class="row g-2 align-items-center">
@@ -129,19 +165,30 @@
             </div>
           </div>
 
+          <!-- Banner kết quả tức thì -->
           <div id="instantResultBox" class="d-none my-2"></div>
 
+          <!-- Khung ngắm Live Camera -->
           <div id="scanner-container">
-            <div id="laserLine" class="laser-line d-none"></div>
+            <div id="scannerOverlay" class="scanner-overlay d-none">
+              <div class="corner corner-tl"></div>
+              <div class="corner corner-tr"></div>
+              <div class="corner corner-bl"></div>
+              <div class="corner corner-br"></div>
+              <div class="laser-line"></div>
+            </div>
             <div id="reader"></div>
           </div>
 
+          <!-- Ô Barcode: Tự động điền mã khi quét trúng -->
           <div class="input-group mt-3">
-            <input type="text" id="manualBarcodeInput" class="form-control" placeholder="Hoặc nhập mã Barcode tay..." onkeypress="if(event.key==='Enter') submitManualScan()">
-            <button class="btn btn-primary" onclick="submitManualScan()"><i class="bi bi-check-lg"></i> Quét</button>
+            <span class="input-group-text bg-light"><i class="bi bi-upc"></i></span>
+            <input type="text" id="manualBarcodeInput" class="form-control fw-bold font-monospace" placeholder="Mã Barcode quét được sẽ điền vào đây..." onkeypress="if(event.key==='Enter') submitManualScan()">
+            <button class="btn btn-primary fw-bold" onclick="submitManualScan()"><i class="bi bi-check-lg"></i> Quét</button>
           </div>
         </div>
 
+        <!-- Bảng danh sách sản phẩm đối soát -->
         <div class="card p-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h6 class="fw-bold mb-0">Danh sách sản phẩm trong đơn:</h6>
@@ -164,6 +211,7 @@
             </table>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -171,15 +219,17 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // 👇 THAY ĐƯỜNG LINK WEB APP APPS SCRIPT CỦA BẠN VÀO ĐÂY:
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4qDZ1Qx37ILiX2yeQVf2RxfPTtFiZP1vJtp9adbdiynHxWInqmuJru6PViBasFlzbtQ/exec";
+    // 👇 ĐƯỜNG LINK APPS SCRIPT WEB APP CỦA BẠN:
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby.../exec";
 
     let html5QrCode = null;
     let currentOrderId = "";
     let lastScannedCode = "";
     let lastScanTime = 0;
     let currentOrderItems = [];
+    let nativeDetectorInterval = null;
 
+    // Âm thanh Beep (Web Audio API)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBeep(success = true) {
       try {
@@ -241,7 +291,7 @@
           updateOrderDropdown(orders);
         })
         .catch(err => {
-          document.getElementById("ordersLoading").innerHTML = `<div class="text-danger">Lỗi kết nối API: ${err.message}</div>`;
+          document.getElementById("ordersLoading").innerHTML = `<div class="text-danger">Lỗi kết nối: ${err.message}</div>`;
         });
     }
 
@@ -263,8 +313,8 @@
               <div class="col-4 border-end"><div class="small text-muted">Cần xuất (H)</div><div class="fw-bold">${o.totalRequired}</div></div>
               <div class="col-4"><div class="small text-muted">Đã quét (T)</div><div class="fw-bold ${o.totalScanned >= o.totalRequired ? 'text-success' : 'text-danger'}">${o.totalScanned}</div></div>
             </div>
-            <button class="btn btn-outline-primary btn-sm w-100 mt-2" onclick="startCheckOrder('${o.orderId}')">
-              <i class="bi bi-camera-fill me-1"></i> Bật Camera quét đơn này
+            <button class="btn btn-outline-primary btn-sm w-100 mt-2 fw-bold" onclick="startCheckOrder('${o.orderId}')">
+              <i class="bi bi-camera-video-fill me-1"></i> Bật Camera quét đơn này
             </button>
           </div>
         </div>
@@ -298,7 +348,7 @@
     function onSelectOrderChange() {
       currentOrderId = document.getElementById("selectOrder").value;
       if (currentOrderId) {
-        loadOrderDetails(currentOrderId);
+        loadOrderDetails(currentOrderId, true);
       } else {
         stopScanner();
         document.getElementById("orderDetailsBody").innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Chưa chọn đơn hàng</td></tr>';
@@ -336,7 +386,7 @@
           }
         }
         return `
-          <tr>
+          <tr id="row-${item.barcode}">
             <td><div class="fw-bold">${item.productName}</div><div class="text-muted small">${item.productCode}</div></td>
             <td><code>${item.barcode}</code></td>
             <td class="text-center fw-bold">${item.reqQty}</td>
@@ -348,6 +398,7 @@
       document.getElementById("orderProgress").innerText = `${matchedCount}/${items.length} khớp`;
     }
 
+    // ================= LIVE CAMERA SCAN TRỰC TIẾP =================
     function startScanner() {
       if (!currentOrderId) {
         alert("Vui lòng chọn Đơn hàng trước khi bật Camera!");
@@ -356,11 +407,11 @@
 
       document.getElementById("btnStartScan").classList.add("d-none");
       document.getElementById("btnStopScan").classList.remove("d-none");
-      document.getElementById("laserLine").classList.remove("d-none");
+      document.getElementById("scannerOverlay").classList.remove("d-none");
 
       const config = {
-        fps: 20,
-        qrbox: { width: 300, height: 180 },
+        fps: 25,
+        qrbox: { width: 300, height: 160 },
         aspectRatio: 1.0
       };
 
@@ -369,28 +420,56 @@
         config,
         onLiveScanSuccess,
         () => {}
-      ).catch(err => {
-        document.getElementById("laserLine").classList.add("d-none");
+      ).then(() => {
+        // Tăng cường nhận diện phần cứng siêu nhạy (BarcodeDetector) nếu thiết bị hỗ trợ
+        startNativeHardwareDetector();
+      }).catch(err => {
+        document.getElementById("scannerOverlay").classList.add("d-none");
         document.getElementById("btnStartScan").classList.remove("d-none");
         document.getElementById("btnStopScan").classList.add("d-none");
         alert("Lỗi mở Camera: " + err);
       });
     }
 
+    // Quét song song bằng Native BarcodeDetector (đọc EAN-13 trong 0.02s)
+    function startNativeHardwareDetector() {
+      if (!('BarcodeDetector' in window)) return;
+      try {
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'code_128', 'code_39', 'upc_a', 'qr_code'] });
+        const video = document.querySelector("#reader video");
+        if (!video) return;
+
+        if (nativeDetectorInterval) clearInterval(nativeDetectorInterval);
+        nativeDetectorInterval = setInterval(async () => {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            try {
+              const barcodes = await detector.detect(video);
+              if (barcodes && barcodes.length > 0) {
+                onLiveScanSuccess(barcodes[0].rawValue);
+              }
+            } catch(e) {}
+          }
+        }, 120);
+      } catch(e) {}
+    }
+
     function stopScanner() {
+      if (nativeDetectorInterval) clearInterval(nativeDetectorInterval);
       if (html5QrCode && html5QrCode.isScanning) {
         html5QrCode.stop().then(() => {
           document.getElementById("btnStartScan").classList.remove("d-none");
           document.getElementById("btnStopScan").classList.add("d-none");
-          document.getElementById("laserLine").classList.add("d-none");
+          document.getElementById("scannerOverlay").classList.add("d-none");
         });
       }
     }
 
+    // XỬ LÝ KHI CAMERA BẮT ĐƯỢC MÃ BARCODE
     function onLiveScanSuccess(decodedText) {
       const now = Date.now();
       const cleanCode = decodedText.trim();
 
+      // Chống quét lặp lại cùng 1 mã trong 1.5 giây
       if (cleanCode === lastScannedCode && (now - lastScanTime) < 1500) {
         return;
       }
@@ -398,6 +477,13 @@
       lastScannedCode = cleanCode;
       lastScanTime = now;
 
+      // 1. TỰ ĐỘNG ĐIỀN MÃ VÀO Ô BARCODE NGAY LẬP TỨC
+      const inputElem = document.getElementById("manualBarcodeInput");
+      inputElem.value = cleanCode;
+      inputElem.classList.add("highlight-success");
+      setTimeout(() => inputElem.classList.remove("highlight-success"), 800);
+
+      // 2. ĐỐI SOÁT & CẬP NHẬT TỨC THÌ
       const addQty = Number(document.getElementById("qtyPerScan").value) || 1;
       handleInstantScan(cleanCode, addQty);
     }
@@ -410,7 +496,6 @@
         return;
       }
       handleInstantScan(barcode, addQty);
-      document.getElementById("manualBarcodeInput").value = "";
     }
 
     function handleInstantScan(barcode, qty) {
@@ -420,13 +505,16 @@
       const item = currentOrderItems.find(i => i.barcode === barcode || i.productCode === barcode);
 
       if (!item) {
-        playBeep(false);
+        playBeep(false); // Âm báo lỗi
         alertBox.className = "scan-alert bg-danger text-white";
         alertBox.innerHTML = `<i class="bi bi-x-octagon-fill me-1"></i> <strong>MÃ LẠ:</strong> [${barcode}] không thuộc đơn [${currentOrderId}]!`;
         return;
       }
 
+      // Phát tiếng Bíp thành công
       playBeep(true);
+
+      // Cập nhật số lượng hiển thị ngay 0ms
       item.scanQty += qty;
       let statusText = item.scanQty === item.reqQty ? "✅ ĐỦ / KHỚP" : (item.scanQty < item.reqQty ? `⚠️ Thiếu ${item.reqQty - item.scanQty}` : `❌ Thừa ${item.scanQty - item.reqQty}`);
       
@@ -435,6 +523,7 @@
 
       renderOrderDetails(currentOrderItems);
 
+      // Gửi cập nhật ngầm lên Google Sheet
       callApi(`${SCRIPT_URL}?action=processScan&orderId=${encodeURIComponent(currentOrderId)}&barcode=${encodeURIComponent(barcode)}&qty=${qty}`)
         .then(res => {
           if (!res.success) {
