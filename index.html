@@ -3,296 +3,240 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Kiểm Tra Xuất Kho Barcode</title>
+  <title>Kiểm Tra Xuất Kho</title>
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-  <!-- Thư viện quét mã vạch html5-qrcode -->
+  <!-- Thư viện quét mã html5-qrcode -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    body { background-color: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .navbar-brand { font-weight: 700; font-size: 1.15rem; }
-    .nav-pills .nav-link { border-radius: 8px; font-weight: 600; padding: 10px 16px; }
-    .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .card { border: none; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
     
-    /* Khung Live Camera */
+    /* 1. KHUNG CAMERA NHỎ GỌN (Cao 200px - Không phóng to, không popup) */
     #scanner-container {
       position: relative;
       width: 100%;
-      max-width: 480px;
+      max-width: 380px;
+      height: 200px;
       margin: 0 auto;
       border-radius: 12px;
       overflow: hidden;
-      background-color: #000;
-      min-height: 250px;
+      background-color: #1a1a1a;
     }
-    #reader { width: 100%; }
-    #reader video { border-radius: 12px; object-fit: cover; }
+    #reader { width: 100%; height: 100%; }
+    #reader video { object-fit: cover; height: 200px !important; }
 
-    /* Khung ngắm 4 góc trắng */
+    /* Khung ngắm & Vạch laser xanh */
     .scanner-overlay {
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 82%;
-      max-width: 320px;
-      height: 165px;
+      width: 80%; height: 120px;
       pointer-events: none;
       z-index: 10;
     }
-    .corner {
-      position: absolute;
-      width: 26px;
-      height: 26px;
-      border-color: #ffffff;
-      border-style: solid;
-    }
-    .corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 4px; }
-    .corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 4px; }
-    .corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 4px; }
-    .corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 4px; }
-
-    /* Vạch laser quét màu xanh lá */
+    .corner { position: absolute; width: 20px; height: 20px; border-color: #00ff44; border-style: solid; }
+    .corner-tl { top: 0; left: 0; border-width: 3px 0 0 3px; }
+    .corner-tr { top: 0; right: 0; border-width: 3px 3px 0 0; }
+    .corner-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+    .corner-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
     .laser-line {
-      position: absolute;
-      top: 15%;
-      left: 2%;
-      width: 96%;
-      height: 3px;
-      background: #00ff44;
-      box-shadow: 0 0 12px #00ff44, 0 0 4px #fff;
+      position: absolute; top: 15%; left: 0; width: 100%; height: 2px;
+      background: #00ff44; box-shadow: 0 0 8px #00ff44;
       animation: scanLaser 1.8s infinite ease-in-out;
-      z-index: 11;
-      pointer-events: none;
     }
     @keyframes scanLaser {
-      0% { top: 12%; }
+      0% { top: 15%; }
       50% { top: 85%; }
-      100% { top: 12%; }
+      100% { top: 15%; }
     }
 
-    .highlight-success {
-      border: 2px solid #198754 !important;
-      background-color: #d1e7dd !important;
-      transition: all 0.3s ease;
+    /* Thẻ hiển thị sản phẩm vừa quét */
+    .product-scanned-card {
+      border: 2px solid #0d6efd;
+      background-color: #f8fbff;
+      border-radius: 12px;
     }
+    .qty-btn { width: 44px; height: 44px; font-size: 1.25rem; font-weight: bold; border-radius: 8px; }
+    .qty-input { max-width: 80px; font-size: 1.3rem; font-weight: 700; text-align: center; }
 
-    .scan-alert {
-      font-size: 0.95rem;
-      font-weight: 600;
-      padding: 10px 14px;
-      border-radius: 10px;
-      animation: fadeInDown 0.25s ease;
-    }
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .badge-status { font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; }
     .table-custom th { background-color: #f8f9fa; font-size: 0.85rem; color: #6c757d; }
     .table-custom td { vertical-align: middle; font-size: 0.9rem; }
   </style>
 </head>
 <body class="pb-5">
 
+  <!-- Header -->
   <nav class="navbar navbar-dark bg-primary sticky-top shadow-sm">
     <div class="container-fluid">
       <span class="navbar-brand mb-0"><i class="bi bi-upc-scan me-2"></i>Kiểm Tra Xuất Kho</span>
-      <button class="btn btn-sm btn-light" onclick="reloadCurrentTab()"><i class="bi bi-arrow-clockwise"></i> Làm mới</button>
+      <button class="btn btn-sm btn-light fw-bold" onclick="showScreen('screen-orders')">
+        <i class="bi bi-list-ul"></i> Chọn đơn khác
+      </button>
     </div>
   </nav>
 
   <div class="container mt-3">
-    <!-- Menu Tabs -->
-    <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded-3 shadow-sm" id="mainTab" role="tablist">
-      <li class="nav-item">
-        <button class="nav-link active" id="menu1-tab" data-bs-toggle="tab" data-bs-target="#menu1" type="button" onclick="loadOrdersSummary()">
-          <i class="bi bi-list-check me-1"></i> 1. Danh sách đơn hàng
-        </button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" id="menu2-tab" data-bs-toggle="tab" data-bs-target="#menu2" type="button">
-          <i class="bi bi-camera-video-fill me-1"></i> 2. Quét kiểm tra (Live)
-        </button>
-      </li>
-    </ul>
 
-    <div class="tab-content" id="mainTabContent">
-      <!-- ================= MENU 1: DANH SÁCH ĐƠN HÀNG ================= -->
-      <div class="tab-pane fade show active" id="menu1" role="tabpanel">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="text-secondary mb-0">Tổng hợp đơn hàng cần xuất:</h6>
-          <input type="text" id="searchOrderInput" class="form-control form-control-sm w-50" placeholder="🔍 Tìm mã đơn..." onkeyup="filterOrders()">
-        </div>
-        <div id="ordersLoading" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status"></div>
-          <div class="text-muted mt-2">Đang tải dữ liệu từ Sheet Dulieu...</div>
-        </div>
-        <div id="ordersList" class="row g-3"></div>
+    <!-- ================= BƯỚC 1: MÀN HÌNH CHỌN ĐƠN HÀNG ================= -->
+    <div id="screen-orders">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0">1. Chọn đơn hàng cần xuất:</h5>
+        <button class="btn btn-sm btn-outline-primary" onclick="loadOrdersSummary()"><i class="bi bi-arrow-clockwise"></i> Làm mới</button>
       </div>
 
-      <!-- ================= MENU 2: LIVE CAMERA & NHẬP SỐ LƯỢNG ================= -->
-      <div class="tab-pane fade" id="menu2" role="tabpanel">
+      <div id="ordersLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="text-muted mt-2">Đang tải danh sách đơn hàng...</div>
+      </div>
+      <div id="ordersList" class="row g-3"></div>
+    </div>
+
+    <!-- ================= BƯỚC 2 & 3: MÀN HÌNH QUÉT CAMERA NHỎ GỌN & NHẬP SL ================= -->
+    <div id="screen-scan" class="d-none">
+      
+      <!-- Thông tin đơn đang kiểm tra -->
+      <div class="card mb-2 p-3 bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-muted small">Đang kiểm tra:</span>
+            <h5 id="scanHeaderOrderId" class="fw-bold text-primary mb-0">Đơn hàng</h5>
+          </div>
+          <span id="orderProgressBadge" class="badge bg-primary fs-6">0/0 mặt hàng</span>
+        </div>
+      </div>
+
+      <!-- Khung Camera Live Nhỏ Gọn (Không phóng to) -->
+      <div class="card mb-3 p-2 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-1 px-1">
+          <small class="fw-bold text-secondary"><i class="bi bi-camera-video-fill text-danger me-1"></i> Khung quét Camera:</small>
+          <span id="cameraStatusText" class="badge bg-success">Đang quét</span>
+        </div>
+
+        <div id="scanner-container">
+          <div id="scannerOverlay" class="scanner-overlay">
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+            <div class="laser-line"></div>
+          </div>
+          <div id="reader"></div>
+        </div>
+      </div>
+
+      <!-- BƯỚC 3: THẺ SẢN PHẨM VỪA QUÉT & ĐIỀU CHỈNH SỐ LƯỢNG (MẶC ĐỊNH = 1) -->
+      <div id="scannedProductCard" class="card product-scanned-card mb-3 p-3 shadow-sm">
+        <div id="scanResultStatus" class="mb-2">
+          <span class="badge bg-secondary">Chờ quét mã...</span>
+        </div>
         
-        <!-- Chọn đơn hàng -->
-        <div class="card mb-3 p-3">
-          <label class="form-label fw-bold text-secondary mb-1">Đơn hàng đang kiểm tra:</label>
-          <select class="form-select form-select-lg fw-bold text-primary" id="selectOrder" onchange="onSelectOrderChange()">
-            <option value="">-- Vui lòng chọn đơn hàng --</option>
-          </select>
+        <div class="mb-2">
+          <h5 id="dispProductName" class="fw-bold text-dark mb-1">Hướng camera vào mã vạch thùng</h5>
+          <div class="text-muted small">Mã vạch: <span id="dispBarcode" class="fw-bold text-primary font-monospace">---</span></div>
         </div>
 
-        <!-- Khung Live Camera & Nhập số lượng -->
-        <div class="card mb-3 p-3">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold"><i class="bi bi-camera-video-fill text-danger me-1"></i> Camera quét trực tiếp</span>
-            <div>
-              <button id="btnStartScan" class="btn btn-sm btn-success fw-bold" onclick="startScanner()">
-                <i class="bi bi-play-circle-fill me-1"></i> Bật Camera
-              </button>
-              <button id="btnStopScan" class="btn btn-sm btn-outline-secondary d-none" onclick="stopScanner()">
-                <i class="bi bi-stop-circle me-1"></i> Tắt
-              </button>
-            </div>
+        <!-- Thông tin số lượng cần xuất (Cột H) vs Đã quét (Cột T) -->
+        <div class="row g-2 text-center bg-white p-2 rounded border mb-3">
+          <div class="col-6 border-end">
+            <div class="small text-muted">Cần xuất (H)</div>
+            <h4 id="dispReqQty" class="fw-bold text-dark mb-0">0</h4>
           </div>
-
-          <!-- Banner thông báo kết quả tức thì -->
-          <div id="instantResultBox" class="d-none my-2"></div>
-
-          <!-- Khung ngắm Camera -->
-          <div id="scanner-container">
-            <div id="scannerOverlay" class="scanner-overlay d-none">
-              <div class="corner corner-tl"></div>
-              <div class="corner corner-tr"></div>
-              <div class="corner corner-bl"></div>
-              <div class="corner corner-br"></div>
-              <div class="laser-line"></div>
-            </div>
-            <div id="reader"></div>
-          </div>
-
-          <!-- Thanh điều khiển: Mã Barcode & Ô nhập số lượng tùy chỉnh (Mặc định = 1) -->
-          <div class="row g-2 mt-2 align-items-center">
-            <div class="col-7">
-              <label class="small text-muted mb-1">Mã Barcode vừa quét:</label>
-              <input type="text" id="manualBarcodeInput" class="form-control fw-bold font-monospace" placeholder="Mã vạch..." onkeypress="if(event.key==='Enter') submitManualScan()">
-            </div>
-            <div class="col-3">
-              <label class="small text-muted mb-1">Số lượng:</label>
-              <input type="number" id="qtyPerScan" class="form-control text-center fw-bold text-success fs-5" value="1" min="1">
-            </div>
-            <div class="col-2 d-flex align-items-end">
-              <button class="btn btn-primary w-100 py-2" onclick="submitManualScan()" title="Cộng thủ công">
-                <i class="bi bi-plus-lg fw-bold"></i>
-              </button>
-            </div>
+          <div class="col-6">
+            <div class="small text-muted">Đã quét trước đó (T)</div>
+            <h4 id="dispCurrentScanned" class="fw-bold text-primary mb-0">0</h4>
           </div>
         </div>
 
-        <!-- Bảng danh sách đối soát & Nút HOÀN THÀNH KIỂM HÀNG -->
-        <div class="card p-3">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="fw-bold mb-0">Danh sách sản phẩm trong đơn:</h6>
-            <span id="orderProgress" class="badge bg-primary">0/0 khớp</span>
-          </div>
-
-          <div class="table-responsive mb-3">
-            <table class="table table-hover table-custom mb-0">
-              <thead>
-                <tr>
-                  <th>Tên sản phẩm (Cột F)</th>
-                  <th>Mã vạch (B)</th>
-                  <th class="text-center">Cần (H)</th>
-                  <th class="text-center">Đã quét (T)</th>
-                  <th class="text-center">Kết quả (U)</th>
-                </tr>
-              </thead>
-              <tbody id="orderDetailsBody">
-                <tr><td colspan="5" class="text-center text-muted py-4">Chưa chọn đơn hàng</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- NÚT HOÀN THÀNH & KẾT THÚC KIỂM HÀNG -->
-          <button id="btnFinishCheck" class="btn btn-success btn-lg w-100 fw-bold shadow-sm py-2" onclick="openFinishReportModal()">
-            <i class="bi bi-check2-all me-1"></i> Hoàn thành & Báo kết quả kiểm hàng
-          </button>
+        <!-- Điều chỉnh số lượng (Mặc định = 1) -->
+        <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
+          <label class="fw-bold text-secondary me-2">Số lượng:</label>
+          <button class="btn btn-outline-secondary qty-btn" onclick="changeQty(-1)"><i class="bi bi-dash"></i></button>
+          <input type="number" id="inputScanQty" class="form-control qty-input text-success" value="1" min="1">
+          <button class="btn btn-outline-secondary qty-btn" onclick="changeQty(1)"><i class="bi bi-plus"></i></button>
         </div>
 
+        <!-- 2 Nút hành động: Xác nhận quét tiếp HOẶC Hoàn thành -->
+        <div class="row g-2">
+          <div class="col-7">
+            <button id="btnConfirmAndNext" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" onclick="confirmScanAndNext()" disabled>
+              <i class="bi bi-check-circle-fill me-1"></i> Xác nhận & Quét tiếp
+            </button>
+          </div>
+          <div class="col-5">
+            <button class="btn btn-success w-100 py-2 fw-bold shadow-sm" onclick="showFinishReport()">
+              <i class="bi bi-flag-fill me-1"></i> Hoàn thành
+            </button>
+          </div>
+        </div>
       </div>
+
+      <!-- Bảng tóm tắt tiến độ đơn hàng -->
+      <div class="card p-3 bg-white">
+        <h6 class="fw-bold text-secondary mb-2">Tiến độ mặt hàng trong đơn:</h6>
+        <div class="table-responsive">
+          <table class="table table-hover table-custom mb-0">
+            <thead>
+              <tr>
+                <th>Tên sản phẩm</th>
+                <th>Mã vạch</th>
+                <th class="text-center">Cần (H)</th>
+                <th class="text-center">Đã quét (T)</th>
+                <th class="text-center">Kết quả</th>
+              </tr>
+            </thead>
+            <tbody id="scanTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
-  </div>
 
-  <!-- MODAL BÁO CÁO TỔNG KẾT HOÀN THÀNH ĐƠN HÀNG -->
-  <div class="modal fade" id="finishReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title fw-bold"><i class="bi bi-clipboard2-check me-2"></i>Kết Quả Kiểm Hàng: <span id="modalReportOrderId"></span></h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- ================= BƯỚC 4: MÀN HÌNH BÁO CÁO KẾT QUẢ ĐỐI CHIẾU ================= -->
+    <div id="screen-report" class="d-none">
+      <div class="card p-3 shadow-sm bg-white mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0"><i class="bi bi-clipboard2-check-fill text-success me-2"></i>Bảng Đối Chiếu Kết Quả: <span id="reportOrderId" class="text-primary"></span></h5>
         </div>
-        <div class="modal-body p-3">
-          
-          <!-- Banner đánh giá đơn hàng -->
-          <div id="modalOrderSummaryBanner" class="p-3 mb-3 rounded-3 text-center"></div>
 
-          <!-- Thống kê số lượng -->
-          <div class="row g-2 text-center mb-3">
-            <div class="col-3">
-              <div class="p-2 bg-light rounded">
-                <div class="small text-muted">Tổng mặt hàng</div>
-                <h5 id="reportTotalItems" class="fw-bold mb-0 text-dark">0</h5>
-              </div>
-            </div>
-            <div class="col-3">
-              <div class="p-2 bg-light rounded">
-                <div class="small text-muted">Đã khớp đủ</div>
-                <h5 id="reportMatchedItems" class="fw-bold mb-0 text-success">0</h5>
-              </div>
-            </div>
-            <div class="col-3">
-              <div class="p-2 bg-light rounded">
-                <div class="small text-muted">Còn thiếu</div>
-                <h5 id="reportMissingItems" class="fw-bold mb-0 text-warning">0</h5>
-              </div>
-            </div>
-            <div class="col-3">
-              <div class="p-2 bg-light rounded">
-                <div class="small text-muted">Bị thừa</div>
-                <h5 id="reportExcessItems" class="fw-bold mb-0 text-danger">0</h5>
-              </div>
-            </div>
-          </div>
+        <!-- Banner đánh giá đơn -->
+        <div id="reportSummaryBanner" class="p-3 mb-3 rounded-3 text-center"></div>
 
-          <!-- Chi tiết từng sản phẩm -->
-          <h6 class="fw-bold text-secondary mb-2">Chi tiết đối soát từng mặt hàng:</h6>
-          <div class="table-responsive">
-            <table class="table table-bordered table-sm mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Sản phẩm</th>
-                  <th>Mã vạch</th>
-                  <th class="text-center">Cần xuất</th>
-                  <th class="text-center">Đã quét</th>
-                  <th class="text-center">Kết quả</th>
-                </tr>
-              </thead>
-              <tbody id="reportItemsTableBody"></tbody>
-            </table>
-          </div>
-
+        <!-- Bảng chi tiết đối chiếu -->
+        <div class="table-responsive mb-3">
+          <table class="table table-bordered table-striped mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>Tên sản phẩm (Cột F)</th>
+                <th>Mã vạch (B)</th>
+                <th class="text-center">Yêu cầu (H)</th>
+                <th class="text-center">Đã quét (T)</th>
+                <th class="text-center">Kết quả đối soát (U)</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody"></tbody>
+          </table>
         </div>
-        <div class="modal-footer bg-light">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng & Quét tiếp</button>
-          <button type="button" class="btn btn-primary fw-bold" onclick="goToMenu1AfterFinish()">
-            <i class="bi bi-arrow-left-circle me-1"></i> Xong & Về danh sách đơn
-          </button>
+
+        <!-- Nút quay lại -->
+        <div class="row g-2">
+          <div class="col-6">
+            <button class="btn btn-outline-primary w-100 py-2 fw-bold" onclick="showScreen('screen-scan')">
+              <i class="bi bi-arrow-left"></i> Quay lại quét tiếp
+            </button>
+          </div>
+          <div class="col-6">
+            <button class="btn btn-success w-100 py-2 fw-bold" onclick="showScreen('screen-orders'); loadOrdersSummary();">
+              <i class="bi bi-check2-all"></i> Xong & Chọn đơn khác
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -303,12 +247,13 @@
 
     let html5QrCode = null;
     let currentOrderId = "";
+    let currentOrderItems = [];
+    let activeScannedItem = null;
     let lastScannedCode = "";
     let lastScanTime = 0;
-    let currentOrderItems = [];
     let nativeDetectorInterval = null;
-    let finishReportModalObj = null;
 
+    // Âm thanh Beep (Web Audio API)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBeep(success = true) {
       try {
@@ -332,7 +277,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-      finishReportModalObj = new bootstrap.Modal(document.getElementById('finishReportModal'));
       html5QrCode = new Html5Qrcode("reader", {
         formatsToSupport: [
           Html5QrcodeSupportedFormats.EAN_13,
@@ -346,12 +290,14 @@
       loadOrdersSummary();
     });
 
-    function reloadCurrentTab() {
-      const activeTab = document.querySelector('.nav-link.active').id;
-      if (activeTab === 'menu1-tab') {
-        loadOrdersSummary();
-      } else {
-        if (currentOrderId) loadOrderDetails(currentOrderId);
+    function showScreen(screenId) {
+      document.getElementById("screen-orders").classList.add("d-none");
+      document.getElementById("screen-scan").classList.add("d-none");
+      document.getElementById("screen-report").classList.add("d-none");
+      document.getElementById(screenId).classList.remove("d-none");
+
+      if (screenId !== "screen-scan") {
+        stopScanner();
       }
     }
 
@@ -360,6 +306,7 @@
       return await res.json();
     }
 
+    // ================= 1. DANH SÁCH ĐƠN HÀNG =================
     function loadOrdersSummary() {
       document.getElementById("ordersLoading").classList.remove("d-none");
       document.getElementById("ordersList").innerHTML = "";
@@ -368,7 +315,6 @@
         .then(orders => {
           document.getElementById("ordersLoading").classList.add("d-none");
           renderOrdersList(orders);
-          updateOrderDropdown(orders);
         })
         .catch(err => {
           document.getElementById("ordersLoading").innerHTML = `<div class="text-danger">Lỗi kết nối: ${err.message}</div>`;
@@ -382,76 +328,43 @@
         return;
       }
       container.innerHTML = orders.map(o => `
-        <div class="col-12 col-md-6 order-item-card" data-order="${o.orderId}">
-          <div class="card p-3 h-100">
+        <div class="col-12 col-md-6">
+          <div class="card p-3 h-100 bg-white">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <h5 class="fw-bold text-primary mb-0">${o.orderId}</h5>
-              <span class="badge ${o.badgeClass} badge-status">${o.statusText}</span>
+              <span class="badge ${o.badgeClass}">${o.statusText}</span>
             </div>
             <div class="row text-center g-2 my-2 py-2 bg-light rounded">
               <div class="col-4 border-end"><div class="small text-muted">Mặt hàng</div><div class="fw-bold">${o.itemCount}</div></div>
               <div class="col-4 border-end"><div class="small text-muted">Cần xuất (H)</div><div class="fw-bold">${o.totalRequired}</div></div>
               <div class="col-4"><div class="small text-muted">Đã quét (T)</div><div class="fw-bold ${o.totalScanned >= o.totalRequired ? 'text-success' : 'text-danger'}">${o.totalScanned}</div></div>
             </div>
-            <button class="btn btn-outline-primary btn-sm w-100 mt-2 fw-bold" onclick="startCheckOrder('${o.orderId}')">
-              <i class="bi bi-camera-video-fill me-1"></i> Bật Camera quét đơn này
+            <button class="btn btn-primary w-100 mt-2 fw-bold" onclick="selectOrderAndStartScan('${o.orderId}')">
+              <i class="bi bi-camera-video me-1"></i> Chọn đơn & Quét mã
             </button>
           </div>
         </div>
       `).join("");
     }
 
-    function filterOrders() {
-      const q = document.getElementById("searchOrderInput").value.toLowerCase();
-      document.querySelectorAll(".order-item-card").forEach(el => {
-        const orderName = el.getAttribute("data-order").toLowerCase();
-        el.style.display = orderName.includes(q) ? "" : "none";
-      });
-    }
-
-    function updateOrderDropdown(orders) {
-      const select = document.getElementById("selectOrder");
-      const savedVal = select.value;
-      select.innerHTML = '<option value="">-- Vui lòng chọn đơn hàng --</option>' +
-        orders.map(o => `<option value="${o.orderId}">${o.orderId} (${o.totalScanned}/${o.totalRequired} hộp)</option>`).join("");
-      if (savedVal) select.value = savedVal;
-    }
-
-    function startCheckOrder(orderId) {
+    function selectOrderAndStartScan(orderId) {
       currentOrderId = orderId;
-      document.getElementById("selectOrder").value = orderId;
-      const tabTrigger = new bootstrap.Tab(document.getElementById('menu2-tab'));
-      tabTrigger.show();
-      loadOrderDetails(orderId, true);
-    }
+      document.getElementById("scanHeaderOrderId").innerText = orderId;
+      resetScannedCard();
+      showScreen("screen-scan");
 
-    function onSelectOrderChange() {
-      currentOrderId = document.getElementById("selectOrder").value;
-      if (currentOrderId) {
-        loadOrderDetails(currentOrderId, true);
-      } else {
-        stopScanner();
-        document.getElementById("orderDetailsBody").innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Chưa chọn đơn hàng</td></tr>';
-      }
-    }
-
-    function loadOrderDetails(orderId, autoStartCamera = false) {
-      document.getElementById("orderDetailsBody").innerHTML = '<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải sản phẩm...</td></tr>';
-      
+      // Tải danh sách mặt hàng của đơn và bật camera nhỏ gọn
+      document.getElementById("scanTableBody").innerHTML = '<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải sản phẩm...</td></tr>';
       callApi(`${SCRIPT_URL}?action=getOrderDetails&orderId=${encodeURIComponent(orderId)}`)
         .then(items => {
           currentOrderItems = items;
-          renderOrderDetails(items);
-          if (autoStartCamera) startScanner();
+          renderScanTable(items);
+          startCompactScanner();
         });
     }
 
-    function renderOrderDetails(items) {
-      const tbody = document.getElementById("orderDetailsBody");
-      if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Đơn hàng không có sản phẩm nào.</td></tr>';
-        return;
-      }
+    function renderScanTable(items) {
+      const tbody = document.getElementById("scanTableBody");
       let matchedCount = 0;
       tbody.innerHTML = items.map(item => {
         let resBadge = '<span class="badge bg-secondary">Chưa check</span>';
@@ -460,14 +373,14 @@
             resBadge = '<span class="badge bg-success">✅ Khớp</span>';
             matchedCount++;
           } else if (item.scanQty < item.reqQty) {
-            resBadge = `<span class="badge bg-warning text-dark">⚠️ Thiếu (${item.reqQty - item.scanQty})</span>`;
+            resBadge = `<span class="badge bg-warning text-dark">⚠️ Thiếu ${item.reqQty - item.scanQty}</span>`;
           } else {
-            resBadge = `<span class="badge bg-danger">❌ Thừa (${item.scanQty - item.reqQty})</span>`;
+            resBadge = `<span class="badge bg-danger">❌ Thừa ${item.scanQty - item.reqQty}</span>`;
           }
         }
         return `
           <tr id="row-${item.barcode}">
-            <td><div class="fw-bold">${item.productName}</div><div class="text-muted small">${item.productCode}</div></td>
+            <td><strong>${item.productName}</strong></td>
             <td><code>${item.barcode}</code></td>
             <td class="text-center fw-bold">${item.reqQty}</td>
             <td class="text-center fw-bold ${item.scanQty === item.reqQty ? 'text-success' : 'text-danger'}">${item.scanQty}</td>
@@ -475,38 +388,25 @@
           </tr>
         `;
       }).join("");
-      document.getElementById("orderProgress").innerText = `${matchedCount}/${items.length} khớp`;
+      document.getElementById("orderProgressBadge").innerText = `${matchedCount}/${items.length} khớp`;
     }
 
-    // ================= LIVE CAMERA SCAN TRỰC TIẾP =================
-    function startScanner() {
-      if (!currentOrderId) {
-        alert("Vui lòng chọn Đơn hàng trước khi bật Camera!");
-        return;
-      }
-
-      document.getElementById("btnStartScan").classList.add("d-none");
-      document.getElementById("btnStopScan").classList.remove("d-none");
-      document.getElementById("scannerOverlay").classList.remove("d-none");
-
-      const config = {
-        fps: 25,
-        qrbox: { width: 300, height: 160 },
-        aspectRatio: 1.0
-      };
+    // ================= 2. KHUNG CAMERA NHỎ GỌN (LIVE) =================
+    function startCompactScanner() {
+      const config = { fps: 25, qrbox: { width: 280, height: 130 }, aspectRatio: 1.77 };
 
       html5QrCode.start(
         { facingMode: "environment" },
         config,
-        onLiveScanSuccess,
+        onBarcodeDetected,
         () => {}
       ).then(() => {
+        document.getElementById("cameraStatusText").className = "badge bg-success";
+        document.getElementById("cameraStatusText").innerText = "Đang quét";
         startNativeHardwareDetector();
       }).catch(err => {
-        document.getElementById("scannerOverlay").classList.add("d-none");
-        document.getElementById("btnStartScan").classList.remove("d-none");
-        document.getElementById("btnStopScan").classList.add("d-none");
-        alert("Lỗi mở Camera: " + err);
+        document.getElementById("cameraStatusText").className = "badge bg-danger";
+        document.getElementById("cameraStatusText").innerText = "Lỗi camera";
       });
     }
 
@@ -523,7 +423,7 @@
             try {
               const barcodes = await detector.detect(video);
               if (barcodes && barcodes.length > 0) {
-                onLiveScanSuccess(barcodes[0].rawValue);
+                onBarcodeDetected(barcodes[0].rawValue);
               }
             } catch(e) {}
           }
@@ -534,149 +434,135 @@
     function stopScanner() {
       if (nativeDetectorInterval) clearInterval(nativeDetectorInterval);
       if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-          document.getElementById("btnStartScan").classList.remove("d-none");
-          document.getElementById("btnStopScan").classList.add("d-none");
-          document.getElementById("scannerOverlay").classList.add("d-none");
-        });
+        html5QrCode.stop();
       }
     }
 
-    // XỬ LÝ KHI CAMERA BẮT ĐƯỢC MÃ BARCODE
-    function onLiveScanSuccess(decodedText) {
-      const now = Date.now();
+    // ================= 3. NHẬN DIỆN MÃ ĐÚNG/SAI & ĐIỀU CHỈNH SỐ LƯỢNG =================
+    function onBarcodeDetected(decodedText) {
       const cleanCode = decodedText.trim();
-
-      // Chống quét lặp lại cùng 1 mã trong 1.5 giây
-      if (cleanCode === lastScannedCode && (now - lastScanTime) < 1500) {
-        return;
-      }
-
-      // NẾU LÀ SẢN PHẨM KHÁC HOẶC LẦN QUÉT MỚI -> TỰ ĐỘNG GHI SỐ LƯỢNG MẶC ĐỊNH LÀ 1
-      if (cleanCode !== lastScannedCode) {
-        document.getElementById("qtyPerScan").value = 1;
-      }
+      const now = Date.now();
+      if (cleanCode === lastScannedCode && (now - lastScanTime) < 1500) return;
 
       lastScannedCode = cleanCode;
       lastScanTime = now;
 
-      // 1. Điền mã vào ô Barcode
-      const inputElem = document.getElementById("manualBarcodeInput");
-      inputElem.value = cleanCode;
-      inputElem.classList.add("highlight-success");
-      setTimeout(() => inputElem.classList.remove("highlight-success"), 800);
+      // Tìm kiếm mã trong danh sách đơn
+      const item = currentOrderItems.find(i => i.barcode === cleanCode || i.productCode === cleanCode);
 
-      // 2. Lấy số lượng và xử lý đối soát
-      const addQty = Number(document.getElementById("qtyPerScan").value) || 1;
-      handleInstantScan(cleanCode, addQty);
+      document.getElementById("dispBarcode").innerText = cleanCode;
+      document.getElementById("inputScanQty").value = 1; // MẶC ĐỊNH SỐ LƯỢNG LÀ 1
+
+      if (item) {
+        // MÃ ĐÚNG
+        playBeep(true);
+        activeScannedItem = { ...item, scannedBarcode: cleanCode };
+        document.getElementById("scanResultStatus").innerHTML = '<span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i> Mã hợp lệ</span>';
+        document.getElementById("dispProductName").innerText = item.productName;
+        document.getElementById("dispReqQty").innerText = item.reqQty;
+        document.getElementById("dispCurrentScanned").innerText = item.scanQty;
+        document.getElementById("btnConfirmAndNext").disabled = false;
+      } else {
+        // MÃ SAI / MÃ LẠ (Đọc hết nhưng báo sai)
+        playBeep(false);
+        activeScannedItem = null;
+        document.getElementById("scanResultStatus").innerHTML = '<span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i> MÃ LẠ (Không có trong đơn)</span>';
+        document.getElementById("dispProductName").innerText = "Sản phẩm không thuộc đơn hàng này!";
+        document.getElementById("dispReqQty").innerText = "0";
+        document.getElementById("dispCurrentScanned").innerText = "0";
+        document.getElementById("btnConfirmAndNext").disabled = true;
+      }
     }
 
-    function submitManualScan() {
-      const barcode = document.getElementById("manualBarcodeInput").value.trim();
-      const addQty = Number(document.getElementById("qtyPerScan").value) || 1;
-      if (!currentOrderId || !barcode) {
-        alert("Vui lòng chọn đơn hàng và nhập mã Barcode!");
-        return;
-      }
-      handleInstantScan(barcode, addQty);
+    function changeQty(delta) {
+      const input = document.getElementById("inputScanQty");
+      let val = (parseInt(input.value) || 1) + delta;
+      if (val < 1) val = 1;
+      input.value = val;
     }
 
-    function handleInstantScan(barcode, qty) {
-      const alertBox = document.getElementById("instantResultBox");
-      alertBox.classList.remove("d-none");
+    function confirmScanAndNext() {
+      if (!activeScannedItem) return;
 
-      const item = currentOrderItems.find(i => i.barcode === barcode || i.productCode === barcode);
+      const qty = parseInt(document.getElementById("inputScanQty").value) || 1;
+      const targetBarcode = activeScannedItem.scannedBarcode;
 
-      if (!item) {
-        playBeep(false); // Âm báo lỗi
-        alertBox.className = "scan-alert bg-danger text-white";
-        alertBox.innerHTML = `<i class="bi bi-x-octagon-fill me-1"></i> <strong>MÃ LẠ:</strong> [${barcode}] không thuộc đơn [${currentOrderId}]!`;
-        return;
+      // Cập nhật mảng dữ liệu hiển thị tức thì
+      const target = currentOrderItems.find(i => i.barcode === targetBarcode || i.productCode === targetBarcode);
+      if (target) {
+        target.scanQty += qty;
+        renderScanTable(currentOrderItems);
       }
-
-      playBeep(true); // Tiếng bíp thành công
-
-      item.scanQty += qty;
-      let statusText = item.scanQty === item.reqQty ? "✅ ĐỦ / KHỚP" : (item.scanQty < item.reqQty ? `⚠️ Thiếu ${item.reqQty - item.scanQty}` : `❌ Thừa ${item.scanQty - item.reqQty}`);
-      
-      alertBox.className = item.scanQty === item.reqQty ? "scan-alert bg-success text-white" : (item.scanQty > item.reqQty ? "scan-alert bg-danger text-white" : "scan-alert bg-warning text-dark");
-      alertBox.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> <strong>${item.productName}</strong> (+${qty})<br>Tiến độ: <b>${item.scanQty} / ${item.reqQty}</b> hộp (${statusText})`;
-
-      renderOrderDetails(currentOrderItems);
 
       // Gửi cập nhật ngầm lên Google Sheet
-      callApi(`${SCRIPT_URL}?action=processScan&orderId=${encodeURIComponent(currentOrderId)}&barcode=${encodeURIComponent(barcode)}&qty=${qty}`)
-        .then(res => {
-          if (!res.success) {
-            alertBox.className = "scan-alert bg-danger text-white";
-            alertBox.innerHTML = res.message;
-          }
-        });
+      callApi(`${SCRIPT_URL}?action=processScan&orderId=${encodeURIComponent(currentOrderId)}&barcode=${encodeURIComponent(targetBarcode)}&qty=${qty}`);
+
+      // Làm mới thẻ sản phẩm và tiếp tục quét tiếp
+      resetScannedCard();
     }
 
-    // ================= BÁO CÁO HOÀN THÀNH ĐƠN HÀNG =================
-    function openFinishReportModal() {
-      if (!currentOrderId || currentOrderItems.length === 0) {
-        alert("Vui lòng chọn đơn hàng cần kiểm tra!");
-        return;
-      }
+    function resetScannedCard() {
+      activeScannedItem = null;
+      document.getElementById("scanResultStatus").innerHTML = '<span class="badge bg-secondary">Sẵn sàng quét hộp tiếp theo...</span>';
+      document.getElementById("dispProductName").innerText = "Hướng camera vào mã vạch thùng";
+      document.getElementById("dispBarcode").innerText = "---";
+      document.getElementById("dispReqQty").innerText = "0";
+      document.getElementById("dispCurrentScanned").innerText = "0";
+      document.getElementById("inputScanQty").value = 1;
+      document.getElementById("btnConfirmAndNext").disabled = true;
+    }
 
-      document.getElementById("modalReportOrderId").innerText = currentOrderId;
+    // ================= 4. HOÀN THÀNH & BẢNG ĐỐI CHIẾU KẾT QUẢ =================
+    function showFinishReport() {
+      stopScanner();
+      showScreen("screen-report");
+
+      document.getElementById("reportOrderId").innerText = currentOrderId;
 
       let matched = 0, missing = 0, excess = 0;
       let totalReq = 0, totalScan = 0;
 
-      const tbody = document.getElementById("reportItemsTableBody");
+      const tbody = document.getElementById("reportTableBody");
       tbody.innerHTML = currentOrderItems.map(item => {
         totalReq += item.reqQty;
         totalScan += item.scanQty;
 
-        let badge = '<span class="badge bg-secondary">Chưa check</span>';
+        let statusText = "";
+        let rowClass = "";
+
         if (item.scanQty === item.reqQty && item.reqQty > 0) {
-          badge = '<span class="badge bg-success">✅ Khớp</span>';
+          statusText = '<span class="badge bg-success fs-6">✅ KHỚP ĐỦ</span>';
+          rowClass = "table-success";
           matched++;
         } else if (item.scanQty < item.reqQty) {
-          badge = `<span class="badge bg-warning text-dark">⚠️ Thiếu ${item.reqQty - item.scanQty}</span>`;
+          statusText = `<span class="badge bg-warning text-dark fs-6">⚠️ THIẾU (${item.reqQty - item.scanQty})</span>`;
+          rowClass = "table-warning";
           missing++;
         } else {
-          badge = `<span class="badge bg-danger">❌ Thừa ${item.scanQty - item.reqQty}</span>`;
+          statusText = `<span class="badge bg-danger fs-6">❌ THỪA (${item.scanQty - item.reqQty})</span>`;
+          rowClass = "table-danger";
           excess++;
         }
 
         return `
-          <tr>
+          <tr class="${rowClass}">
             <td><strong>${item.productName}</strong><br><small class="text-muted">${item.productCode}</small></td>
             <td><code>${item.barcode}</code></td>
-            <td class="text-center fw-bold">${item.reqQty}</td>
-            <td class="text-center fw-bold ${item.scanQty === item.reqQty ? 'text-success' : 'text-danger'}">${item.scanQty}</td>
-            <td class="text-center">${badge}</td>
+            <td class="text-center fw-bold fs-6">${item.reqQty}</td>
+            <td class="text-center fw-bold fs-6">${item.scanQty}</td>
+            <td class="text-center">${statusText}</td>
           </tr>
         `;
       }).join("");
 
-      document.getElementById("reportTotalItems").innerText = currentOrderItems.length;
-      document.getElementById("reportMatchedItems").innerText = matched;
-      document.getElementById("reportMissingItems").innerText = missing;
-      document.getElementById("reportExcessItems").innerText = excess;
-
-      const banner = document.getElementById("modalOrderSummaryBanner");
+      const banner = document.getElementById("reportSummaryBanner");
       if (matched === currentOrderItems.length && totalScan === totalReq) {
         banner.className = "p-3 mb-3 rounded-3 text-center bg-success text-white";
-        banner.innerHTML = `<h5 class="fw-bold mb-1"><i class="bi bi-check-circle-fill me-2"></i>ĐƠN HÀNG ĐÃ KHỚP HOÀN TOÀN!</h5><div>Tất cả ${currentOrderItems.length} mặt hàng đã đủ số lượng xuất kho (${totalScan}/${totalReq} hộp).</div>`;
+        banner.innerHTML = `<h4 class="fw-bold mb-1">🎉 ĐƠN HÀNG ĐÃ KHỚP HOÀN TOÀN!</h4><div>Đã kiểm tra đủ ${matched}/${currentOrderItems.length} mặt hàng (Tổng: ${totalScan}/${totalReq} hộp).</div>`;
       } else {
         banner.className = "p-3 mb-3 rounded-3 text-center bg-warning text-dark";
-        banner.innerHTML = `<h5 class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>ĐƠN HÀNG CÒN LỆCH SỐ LƯỢNG!</h5><div>Đã khớp: ${matched}/${currentOrderItems.length} mặt hàng. Tổng xuất: ${totalScan}/${totalReq} hộp.</div>`;
+        banner.innerHTML = `<h4 class="fw-bold mb-1">⚠️ ĐƠN HÀNG CÒN LỆCH SỐ LƯỢNG!</h4><div>Khớp: ${matched} mặt hàng | Còn thiếu: ${missing} mặt hàng | Bị thừa: ${excess} mặt hàng.</div>`;
       }
-
-      finishReportModalObj.show();
-    }
-
-    function goToMenu1AfterFinish() {
-      finishReportModalObj.hide();
-      stopScanner();
-      const tabTrigger = new bootstrap.Tab(document.getElementById('menu1-tab'));
-      tabTrigger.show();
-      loadOrdersSummary();
     }
   </script>
 </body>
