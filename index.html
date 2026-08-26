@@ -7,51 +7,55 @@
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-  <!-- Thư viện quét mã html5-qrcode -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- Thư viện quét mã vạch ZXing Engine siêu tốc -->
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 
   <style>
     body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .navbar-brand { font-weight: 700; font-size: 1.15rem; }
     .card { border: none; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
     
-    /* 1. KHUNG CAMERA NHỎ GỌN (Cao 200px - Không phóng to, không popup) */
+    /* KHUNG CAMERA LIVE NHỎ GỌN */
     #scanner-container {
       position: relative;
       width: 100%;
-      max-width: 380px;
-      height: 200px;
+      max-width: 400px;
+      height: 210px;
       margin: 0 auto;
       border-radius: 12px;
       overflow: hidden;
-      background-color: #1a1a1a;
+      background-color: #000;
     }
-    #reader { width: 100%; height: 100%; }
-    #reader video { object-fit: cover; height: 200px !important; }
+    #videoElement {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
 
     /* Khung ngắm & Vạch laser xanh */
     .scanner-overlay {
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 80%; height: 120px;
+      width: 85%; height: 130px;
       pointer-events: none;
       z-index: 10;
     }
-    .corner { position: absolute; width: 20px; height: 20px; border-color: #00ff44; border-style: solid; }
-    .corner-tl { top: 0; left: 0; border-width: 3px 0 0 3px; }
-    .corner-tr { top: 0; right: 0; border-width: 3px 3px 0 0; }
-    .corner-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
-    .corner-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+    .corner { position: absolute; width: 22px; height: 22px; border-color: #00ff44; border-style: solid; }
+    .corner-tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-top-left-radius: 4px; }
+    .corner-tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-top-right-radius: 4px; }
+    .corner-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-bottom-left-radius: 4px; }
+    .corner-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-bottom-right-radius: 4px; }
+    
     .laser-line {
       position: absolute; top: 15%; left: 0; width: 100%; height: 2px;
-      background: #00ff44; box-shadow: 0 0 8px #00ff44;
-      animation: scanLaser 1.8s infinite ease-in-out;
+      background: #00ff44; box-shadow: 0 0 10px #00ff44;
+      animation: scanLaser 1.5s infinite ease-in-out;
     }
     @keyframes scanLaser {
-      0% { top: 15%; }
-      50% { top: 85%; }
-      100% { top: 15%; }
+      0% { top: 12%; }
+      50% { top: 88%; }
+      100% { top: 12%; }
     }
 
     /* Thẻ hiển thị sản phẩm vừa quét */
@@ -69,7 +73,6 @@
 </head>
 <body class="pb-5">
 
-  <!-- Header -->
   <nav class="navbar navbar-dark bg-primary sticky-top shadow-sm">
     <div class="container-fluid">
       <span class="navbar-brand mb-0"><i class="bi bi-upc-scan me-2"></i>Kiểm Tra Xuất Kho</span>
@@ -95,10 +98,10 @@
       <div id="ordersList" class="row g-3"></div>
     </div>
 
-    <!-- ================= BƯỚC 2 & 3: MÀN HÌNH QUÉT CAMERA NHỎ GỌN & NHẬP SL ================= -->
+    <!-- ================= BƯỚC 2 & 3: QUÉT LIVE SIÊU TỐC & NHẬP SỐ LƯỢNG ================= -->
     <div id="screen-scan" class="d-none">
       
-      <!-- Thông tin đơn đang kiểm tra -->
+      <!-- Thông tin đơn -->
       <div class="card mb-2 p-3 bg-white">
         <div class="d-flex justify-content-between align-items-center">
           <div>
@@ -109,37 +112,37 @@
         </div>
       </div>
 
-      <!-- Khung Camera Live Nhỏ Gọn (Không phóng to) -->
+      <!-- Khung Camera Live Nhỏ Gọn Siêu Tốc -->
       <div class="card mb-3 p-2 bg-white">
         <div class="d-flex justify-content-between align-items-center mb-1 px-1">
           <small class="fw-bold text-secondary"><i class="bi bi-camera-video-fill text-danger me-1"></i> Khung quét Camera:</small>
-          <span id="cameraStatusText" class="badge bg-success">Đang quét</span>
+          <span id="cameraStatusText" class="badge bg-success">Đang quét siêu tốc</span>
         </div>
 
         <div id="scanner-container">
-          <div id="scannerOverlay" class="scanner-overlay">
+          <div class="scanner-overlay">
             <div class="corner corner-tl"></div>
             <div class="corner corner-tr"></div>
             <div class="corner corner-bl"></div>
             <div class="corner corner-br"></div>
             <div class="laser-line"></div>
           </div>
-          <div id="reader"></div>
+          <video id="videoElement" playsinline autoplay muted></video>
         </div>
       </div>
 
-      <!-- BƯỚC 3: THẺ SẢN PHẨM VỪA QUÉT & ĐIỀU CHỈNH SỐ LƯỢNG (MẶC ĐỊNH = 1) -->
+      <!-- BƯỚC 3: THẺ SẢN PHẨM VỪA QUÉT & SỐ LƯỢNG (MẶC ĐỊNH = 1) -->
       <div id="scannedProductCard" class="card product-scanned-card mb-3 p-3 shadow-sm">
         <div id="scanResultStatus" class="mb-2">
-          <span class="badge bg-secondary">Chờ quét mã...</span>
+          <span class="badge bg-secondary">Sẵn sàng quét...</span>
         </div>
         
         <div class="mb-2">
           <h5 id="dispProductName" class="fw-bold text-dark mb-1">Hướng camera vào mã vạch thùng</h5>
-          <div class="text-muted small">Mã vạch: <span id="dispBarcode" class="fw-bold text-primary font-monospace">---</span></div>
+          <div class="text-muted small">Mã vạch: <span id="dispBarcode" class="fw-bold text-primary font-monospace fs-6">---</span></div>
         </div>
 
-        <!-- Thông tin số lượng cần xuất (Cột H) vs Đã quét (Cột T) -->
+        <!-- Cần xuất (H) vs Đã quét (T) -->
         <div class="row g-2 text-center bg-white p-2 rounded border mb-3">
           <div class="col-6 border-end">
             <div class="small text-muted">Cần xuất (H)</div>
@@ -159,7 +162,7 @@
           <button class="btn btn-outline-secondary qty-btn" onclick="changeQty(1)"><i class="bi bi-plus"></i></button>
         </div>
 
-        <!-- 2 Nút hành động: Xác nhận quét tiếp HOẶC Hoàn thành -->
+        <!-- 2 Nút hành động -->
         <div class="row g-2">
           <div class="col-7">
             <button id="btnConfirmAndNext" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" onclick="confirmScanAndNext()" disabled>
@@ -174,7 +177,7 @@
         </div>
       </div>
 
-      <!-- Bảng tóm tắt tiến độ đơn hàng -->
+      <!-- Bảng tiến độ đơn hàng -->
       <div class="card p-3 bg-white">
         <h6 class="fw-bold text-secondary mb-2">Tiến độ mặt hàng trong đơn:</h6>
         <div class="table-responsive">
@@ -195,17 +198,15 @@
 
     </div>
 
-    <!-- ================= BƯỚC 4: MÀN HÌNH BÁO CÁO KẾT QUẢ ĐỐI CHIẾU ================= -->
+    <!-- ================= BƯỚC 4: BÁO CÁO KẾT QUẢ ĐỐI CHIẾU ================= -->
     <div id="screen-report" class="d-none">
       <div class="card p-3 shadow-sm bg-white mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="fw-bold text-dark mb-0"><i class="bi bi-clipboard2-check-fill text-success me-2"></i>Bảng Đối Chiếu Kết Quả: <span id="reportOrderId" class="text-primary"></span></h5>
         </div>
 
-        <!-- Banner đánh giá đơn -->
         <div id="reportSummaryBanner" class="p-3 mb-3 rounded-3 text-center"></div>
 
-        <!-- Bảng chi tiết đối chiếu -->
         <div class="table-responsive mb-3">
           <table class="table table-bordered table-striped mb-0">
             <thead class="table-dark">
@@ -221,7 +222,6 @@
           </table>
         </div>
 
-        <!-- Nút quay lại -->
         <div class="row g-2">
           <div class="col-6">
             <button class="btn btn-outline-primary w-100 py-2 fw-bold" onclick="showScreen('screen-scan')">
@@ -245,15 +245,16 @@
     // 👇 THAY ĐƯỜNG LINK APPS SCRIPT WEB APP CỦA BẠN VÀO ĐÂY:
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwA5InY6hX1cm14N_pv0Oi7WG8SK2IvqPxZoglZ6iIUqtEWRNiBaVDKMf3dGUe7dx9u7Q/exec";
 
-    let html5QrCode = null;
+    let codeReader = null;
     let currentOrderId = "";
     let currentOrderItems = [];
     let activeScannedItem = null;
     let lastScannedCode = "";
     let lastScanTime = 0;
-    let nativeDetectorInterval = null;
+    let isScanningActive = false;
+    let nativeDetectorTimer = null;
 
-    // Âm thanh Beep (Web Audio API)
+    // Âm thanh Beep
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBeep(success = true) {
       try {
@@ -277,16 +278,20 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-      html5QrCode = new Html5Qrcode("reader", {
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.QR_CODE
-        ],
-        verbose: false
-      });
+      // Khởi tạo ZXing Multi-Format Reader với chế độ TRY_HARDER = TRUE
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.UPC_A,
+        ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.QR_CODE
+      ]);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true); // Bắt buộc nhận diện mã nghiêng, mờ, nhỏ
+
+      codeReader = new ZXing.BrowserMultiFormatReader(hints);
       loadOrdersSummary();
     });
 
@@ -353,13 +358,12 @@
       resetScannedCard();
       showScreen("screen-scan");
 
-      // Tải danh sách mặt hàng của đơn và bật camera nhỏ gọn
       document.getElementById("scanTableBody").innerHTML = '<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải sản phẩm...</td></tr>';
       callApi(`${SCRIPT_URL}?action=getOrderDetails&orderId=${encodeURIComponent(orderId)}`)
         .then(items => {
           currentOrderItems = items;
           renderScanTable(items);
-          startCompactScanner();
+          startHighSpeedScanner();
         });
     }
 
@@ -391,83 +395,87 @@
       document.getElementById("orderProgressBadge").innerText = `${matchedCount}/${items.length} khớp`;
     }
 
-    // ================= 2. KHUNG CAMERA NHỎ GỌN (LIVE) =================
-    function startCompactScanner() {
-      const config = { fps: 25, qrbox: { width: 280, height: 130 }, aspectRatio: 1.77 };
+    // ================= 2. ĐỘNG CƠ QUÉT LIVE SIÊU TỐC =================
+    function startHighSpeedScanner() {
+      if (isScanningActive) return;
+      isScanningActive = true;
 
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        onBarcodeDetected,
-        () => {}
-      ).then(() => {
-        document.getElementById("cameraStatusText").className = "badge bg-success";
-        document.getElementById("cameraStatusText").innerText = "Đang quét";
-        startNativeHardwareDetector();
+      const constraints = {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+
+      // 1. Quét liên tục với ZXing Engine
+      codeReader.decodeFromConstraints(constraints, 'videoElement', (result, err) => {
+        if (result) {
+          onBarcodeDetected(result.getText());
+        }
       }).catch(err => {
-        document.getElementById("cameraStatusText").className = "badge bg-danger";
-        document.getElementById("cameraStatusText").innerText = "Lỗi camera";
+        console.error("Camera error:", err);
       });
-    }
 
-    function startNativeHardwareDetector() {
-      if (!('BarcodeDetector' in window)) return;
-      try {
-        const detector = new BarcodeDetector({ formats: ['ean_13', 'code_128', 'code_39', 'upc_a', 'qr_code'] });
-        const video = document.querySelector("#reader video");
-        if (!video) return;
-
-        if (nativeDetectorInterval) clearInterval(nativeDetectorInterval);
-        nativeDetectorInterval = setInterval(async () => {
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            try {
-              const barcodes = await detector.detect(video);
-              if (barcodes && barcodes.length > 0) {
-                onBarcodeDetected(barcodes[0].rawValue);
-              }
-            } catch(e) {}
-          }
-        }, 120);
-      } catch(e) {}
-    }
-
-    function stopScanner() {
-      if (nativeDetectorInterval) clearInterval(nativeDetectorInterval);
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop();
+      // 2. Chạy song song Hardware BarcodeDetector (đọc tức thì 0.03s trên iOS 17+/Android)
+      if ('BarcodeDetector' in window) {
+        try {
+          const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'qr_code'] });
+          const video = document.getElementById("videoElement");
+          
+          if (nativeDetectorTimer) clearInterval(nativeDetectorTimer);
+          nativeDetectorTimer = setInterval(async () => {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+              try {
+                const barcodes = await detector.detect(video);
+                if (barcodes && barcodes.length > 0) {
+                  onBarcodeDetected(barcodes[0].rawValue);
+                }
+              } catch(e) {}
+            }
+          }, 80); // Quét mỗi 80ms
+        } catch(e) {}
       }
     }
 
-    // ================= 3. NHẬN DIỆN MÃ ĐÚNG/SAI & ĐIỀU CHỈNH SỐ LƯỢNG =================
+    function stopScanner() {
+      isScanningActive = false;
+      if (nativeDetectorTimer) clearInterval(nativeDetectorTimer);
+      if (codeReader) {
+        codeReader.reset();
+      }
+    }
+
+    // ================= 3. XỬ LÝ KHI BẮT ĐƯỢC MÃ (ĐÚNG/SAI ĐỌC HẾT) =================
     function onBarcodeDetected(decodedText) {
       const cleanCode = decodedText.trim();
       const now = Date.now();
-      if (cleanCode === lastScannedCode && (now - lastScanTime) < 1500) return;
+      if (cleanCode === lastScannedCode && (now - lastScanTime) < 1600) return;
 
       lastScannedCode = cleanCode;
       lastScanTime = now;
 
-      // Tìm kiếm mã trong danh sách đơn
+      // Tìm kiếm mã trong đơn hàng
       const item = currentOrderItems.find(i => i.barcode === cleanCode || i.productCode === cleanCode);
 
       document.getElementById("dispBarcode").innerText = cleanCode;
-      document.getElementById("inputScanQty").value = 1; // MẶC ĐỊNH SỐ LƯỢNG LÀ 1
+      document.getElementById("inputScanQty").value = 1; // MẶC ĐỊNH LÀ 1
 
       if (item) {
-        // MÃ ĐÚNG
+        // MÃ ĐÚNG CỦA ĐƠN
         playBeep(true);
         activeScannedItem = { ...item, scannedBarcode: cleanCode };
-        document.getElementById("scanResultStatus").innerHTML = '<span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i> Mã hợp lệ</span>';
+        document.getElementById("scanResultStatus").innerHTML = '<span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill me-1"></i> Mã hợp lệ</span>';
         document.getElementById("dispProductName").innerText = item.productName;
         document.getElementById("dispReqQty").innerText = item.reqQty;
         document.getElementById("dispCurrentScanned").innerText = item.scanQty;
         document.getElementById("btnConfirmAndNext").disabled = false;
       } else {
-        // MÃ SAI / MÃ LẠ (Đọc hết nhưng báo sai)
+        // MÃ LẠ / MÃ KHÁC (Đọc hết nhưng báo đỏ)
         playBeep(false);
         activeScannedItem = null;
-        document.getElementById("scanResultStatus").innerHTML = '<span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i> MÃ LẠ (Không có trong đơn)</span>';
-        document.getElementById("dispProductName").innerText = "Sản phẩm không thuộc đơn hàng này!";
+        document.getElementById("scanResultStatus").innerHTML = '<span class="badge bg-danger fs-6"><i class="bi bi-x-circle-fill me-1"></i> MÃ LẠ (Không thuộc đơn này)</span>';
+        document.getElementById("dispProductName").innerText = "Sản phẩm không có trong đơn xuất!";
         document.getElementById("dispReqQty").innerText = "0";
         document.getElementById("dispCurrentScanned").innerText = "0";
         document.getElementById("btnConfirmAndNext").disabled = true;
@@ -487,7 +495,7 @@
       const qty = parseInt(document.getElementById("inputScanQty").value) || 1;
       const targetBarcode = activeScannedItem.scannedBarcode;
 
-      // Cập nhật mảng dữ liệu hiển thị tức thì
+      // Cập nhật số lượng hiển thị ngay lập tức
       const target = currentOrderItems.find(i => i.barcode === targetBarcode || i.productCode === targetBarcode);
       if (target) {
         target.scanQty += qty;
@@ -497,7 +505,7 @@
       // Gửi cập nhật ngầm lên Google Sheet
       callApi(`${SCRIPT_URL}?action=processScan&orderId=${encodeURIComponent(currentOrderId)}&barcode=${encodeURIComponent(targetBarcode)}&qty=${qty}`);
 
-      // Làm mới thẻ sản phẩm và tiếp tục quét tiếp
+      // Làm mới thẻ quét để tiếp tục
       resetScannedCard();
     }
 
@@ -512,7 +520,7 @@
       document.getElementById("btnConfirmAndNext").disabled = true;
     }
 
-    // ================= 4. HOÀN THÀNH & BẢNG ĐỐI CHIẾU KẾT QUẢ =================
+    // ================= 4. BẢNG BÁO CÁO ĐỐI CHIẾU KẾT QUẢ =================
     function showFinishReport() {
       stopScanner();
       showScreen("screen-report");
